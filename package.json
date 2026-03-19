@@ -1,0 +1,24 @@
+{
+  "name": "kb-server",
+  "version": "1.0.0",
+  "description": "MCP server for personal knowledge base with SQLite FTS5",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node src/server.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "better-sqlite3": "^11.8.2",
+    "express": "^4.21.2",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}
