@@ -123,6 +123,38 @@ function createServer(): McpServer {
     }
   );
 
+  server.tool(
+    "kb_delete",
+    "Elimina un documento de la knowledge base por ID. Usa esto para borrar documentos obsoletos o incorrectos.",
+    {
+      id: z.number().describe("Document ID to delete"),
+    },
+    async ({ id }) => {
+      console.log(`[kb_delete] id=${id}`);
+      try {
+        const deleted = kb.delete(id);
+        if (!deleted) {
+          return {
+            content: [
+              { type: "text" as const, text: JSON.stringify({ error: `Document with id ${id} not found` }) },
+            ],
+            isError: true,
+          };
+        }
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ message: `Document ${id} deleted` }) }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[kb_delete] error: ${message}`);
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ error: message }) }],
+          isError: true,
+        };
+      }
+    }
+  );
+
   return server;
 }
 

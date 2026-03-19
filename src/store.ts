@@ -75,6 +75,14 @@ export class KnowledgeBase {
   }
 
   search(query: string, limit: number = 5): SearchResult[] {
+    // Wrap each token in double quotes so FTS5 treats hyphens and
+    // special characters as literals instead of operators
+    const safeQuery = query
+      .split(/\s+/)
+      .filter((t) => t.length > 0)
+      .map((t) => `"${t.replace(/"/g, "")}"`)
+      .join(" ");
+
     const stmt = this.db.prepare(`
       SELECT
         m.id,
@@ -90,7 +98,7 @@ export class KnowledgeBase {
       LIMIT ?
     `);
 
-    const rows = stmt.all(query, limit) as Array<{
+    const rows = stmt.all(safeQuery, limit) as Array<{
       id: number;
       title: string;
       snippet: string;
@@ -213,6 +221,22 @@ export class KnowledgeBase {
       ...row,
       tags: row.tags ? row.tags.split(",").map((t) => t.trim()) : [],
     }));
+  }
+
+  delete(id: number): boolean {
+    const existing = this.db
+      .prepare("SELECT id FROM meta WHERE id = ?")
+      .get(id) as { id: number } | undefined;
+
+    if (!existing) return false;
+
+    const txn = this.db.transaction(() => {
+      this.db.prepare("DELETE FROM documents WHERE rowid = ?").run(id);
+      this.db.prepare("DELETE FROM meta WHERE id = ?").run(id);
+    });
+    txn();
+
+    return true;
   }
 
   // --- OAuth methods ---

@@ -147,7 +147,7 @@ export function startHttpTransport(
     }
 
     const accessToken = randomUUID();
-    const expiresIn = 3600; // 1 hour
+    const expiresIn = 7776000; // 90 days
     kb.saveAccessToken(accessToken, client_id, expiresIn * 1000);
 
     console.log(`[oauth] token: issued access_token for client="${client_id}"`);
