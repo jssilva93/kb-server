@@ -76,12 +76,12 @@ export class KnowledgeBase {
 
   search(query: string, limit: number = 5): SearchResult[] {
     // Wrap each token in double quotes so FTS5 treats hyphens and
-    // special characters as literals instead of operators
+    // special characters as literals, then join with OR for broader matches
     const safeQuery = query
       .split(/\s+/)
       .filter((t) => t.length > 0)
       .map((t) => `"${t.replace(/"/g, "")}"`)
-      .join(" ");
+      .join(" OR ");
 
     const stmt = this.db.prepare(`
       SELECT
