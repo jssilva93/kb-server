@@ -1,12 +1,13 @@
 # kb-server
 
-MCP server for a personal knowledge base with full-text search. Built with SQLite FTS5 and the [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) (MCP spec 2025-03-26).
+MCP server for a personal knowledge base with hybrid search (FTS5 + semantic). Built with SQLite FTS5, vector embeddings via [multilingual-e5-small](https://huggingface.co/Xenova/multilingual-e5-small), and the [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) (MCP spec 2025-03-26).
 
 ## Stack
 
 - Node.js 20 + TypeScript (strict mode)
 - SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) — synchronous, no ORM
-- FTS5 for full-text search with BM25 ranking
+- Hybrid search: FTS5 (BM25) + semantic embeddings fused via Reciprocal Rank Fusion
+- [@xenova/transformers](https://github.com/xenova/transformers.js) — multilingual-e5-small for vector embeddings (384 dims, multilingual)
 - Express for HTTP transport
 - [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/typescript-sdk) for MCP protocol
 - OAuth 2.0 Authorization Code flow for authentication
@@ -15,7 +16,7 @@ MCP server for a personal knowledge base with full-text search. Built with SQLit
 
 | Tool | Description |
 |---|---|
-| `kb_search` | Full-text search with BM25 ranking. Returns snippets, scores, and metadata. |
+| `kb_search` | Hybrid search (FTS5 + semantic). Keyword matches and conceptual similarity fused via RRF. |
 | `kb_ingest` | Save a document. Tag with `"evergreen"` to upsert by title instead of creating duplicates. |
 | `kb_read` | Read full document content by ID. |
 | `kb_list` | List documents, optionally filtered by title prefix. |
@@ -129,6 +130,7 @@ SQLite file is stored at `./data/kb.sqlite` (created automatically on first run)
 
 - **meta** — document metadata (id, title, tags, timestamps)
 - **documents** — FTS5 virtual table (title, content, tags) for full-text search
+- **embeddings** — vector embeddings (doc_id, BLOB) for semantic search, cascades on delete
 - **oauth_codes** — authorization codes (auto-cleaned)
 - **oauth_tokens** — access tokens (auto-cleaned)
 
@@ -146,10 +148,19 @@ pm2 start kb-server
 ```
 kb-server/
   src/
-    server.ts    # MCP server factory with tool definitions
-    store.ts     # KnowledgeBase class — SQLite + FTS5 + OAuth storage
-    http.ts      # Express server — Streamable HTTP transport + OAuth endpoints
+    server.ts      # MCP server factory, hybrid search, startup migration
+    store.ts       # KnowledgeBase class — SQLite + FTS5 + embeddings + OAuth storage
+    embeddings.ts  # Embedding pipeline (multilingual-e5-small), cosine similarity
+    http.ts        # Express server — Streamable HTTP transport + OAuth endpoints
   .env.example
   package.json
   tsconfig.json
 ```
+
+## How hybrid search works
+
+1. **FTS5** finds keyword matches using BM25 ranking
+2. **Semantic search** embeds the query with multilingual-e5-small and compares against stored document vectors via cosine similarity
+3. **Reciprocal Rank Fusion** (k=60) merges both ranked lists into a single result set
+4. Embeddings are generated automatically on ingest and backfilled at startup for existing documents
+5. If the embedding model fails to load, search degrades gracefully to FTS5-only

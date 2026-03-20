@@ -1,9 +1,91 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { KnowledgeBase } from "./store.js";
+import { KnowledgeBase, SearchResult } from "./store.js";
 import { startHttpTransport } from "./http.js";
+import { initEmbeddings, isReady, embed, cosineSimilarity } from "./embeddings.js";
 
 const kb = new KnowledgeBase();
+
+// --- Hybrid search helpers ---
+
+async function searchSemantic(
+  query: string,
+  limit: number
+): Promise<Array<{ id: number; score: number }>> {
+  if (!isReady()) return [];
+
+  const queryVec = await embed(query, "query");
+  const allEmbeddings = kb.getAllEmbeddings();
+
+  const scored = allEmbeddings.map((e) => ({
+    id: e.doc_id,
+    score: cosineSimilarity(queryVec, e.vector),
+  }));
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit);
+}
+
+function reciprocalRankFusion(
+  ftsResults: Array<{ id: number }>,
+  semResults: Array<{ id: number }>,
+  k = 60
+): number[] {
+  const scores = new Map<number, number>();
+
+  for (let i = 0; i < ftsResults.length; i++) {
+    const id = ftsResults[i].id;
+    scores.set(id, (scores.get(id) ?? 0) + 1 / (k + i + 1));
+  }
+
+  for (let i = 0; i < semResults.length; i++) {
+    const id = semResults[i].id;
+    scores.set(id, (scores.get(id) ?? 0) + 1 / (k + i + 1));
+  }
+
+  return [...scores.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => id);
+}
+
+async function searchHybrid(query: string, limit: number): Promise<SearchResult[]> {
+  const ftsLimit = limit * 2;
+
+  const [ftsResults, semResults] = await Promise.all([
+    Promise.resolve(kb.search(query, ftsLimit)),
+    searchSemantic(query, ftsLimit),
+  ]);
+
+  const rankedIds = reciprocalRankFusion(ftsResults, semResults);
+  const topIds = rankedIds.slice(0, limit);
+
+  // Build results preserving RRF order, using FTS data when available
+  const ftsMap = new Map(ftsResults.map((r) => [r.id, r]));
+  const results: SearchResult[] = [];
+
+  for (const id of topIds) {
+    const ftsHit = ftsMap.get(id);
+    if (ftsHit) {
+      results.push(ftsHit);
+    } else {
+      const doc = kb.read(id);
+      if (doc) {
+        results.push({
+          id: doc.id,
+          title: doc.title,
+          snippet: doc.content.slice(0, 200),
+          score: 0,
+          tags: doc.tags,
+          updated_at: doc.updated_at,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+// --- MCP Server ---
 
 function createServer(): McpServer {
   const server = new McpServer({
@@ -21,7 +103,7 @@ function createServer(): McpServer {
     async ({ query, limit }) => {
       console.log(`[kb_search] query="${query}" limit=${limit}`);
       try {
-        const results = kb.search(query, limit);
+        const results = await searchHybrid(query, limit);
         return {
           content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
         };
@@ -48,6 +130,17 @@ function createServer(): McpServer {
       console.log(`[kb_ingest] title="${title}" tags=[${tags.join(", ")}]`);
       try {
         const id = kb.ingest(title, content, tags);
+
+        // Fire-and-forget: generate embedding for the new/updated document
+        if (isReady()) {
+          embed(title + " " + content, "passage")
+            .then((vec) => kb.saveEmbedding(id, vec))
+            .then(() => console.log(`[embeddings] generated for doc ${id}`))
+            .catch((err) =>
+              console.error(`[embeddings] failed for doc ${id}: ${err instanceof Error ? err.message : String(err)}`)
+            );
+        }
+
         return {
           content: [
             {
@@ -158,5 +251,33 @@ function createServer(): McpServer {
   return server;
 }
 
-console.log("kb-server starting...");
-startHttpTransport(createServer, kb);
+// --- Startup ---
+
+async function main() {
+  console.log("kb-server starting...");
+
+  // Load embeddings model (graceful degradation if it fails)
+  await initEmbeddings();
+
+  // Migrate: generate embeddings for existing documents without them
+  const missingIds = kb.getDocIdsWithoutEmbeddings();
+  if (missingIds.length > 0) {
+    console.log(`[migration] generating embeddings for ${missingIds.length} documents...`);
+    for (const id of missingIds) {
+      try {
+        const doc = kb.read(id);
+        if (doc) {
+          const vec = await embed(doc.title + " " + doc.content, "passage");
+          kb.saveEmbedding(id, vec);
+        }
+      } catch (err) {
+        console.error(`[migration] failed for doc ${id}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    console.log(`[migration] done`);
+  }
+
+  startHttpTransport(createServer, kb);
+}
+
+main();

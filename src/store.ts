@@ -39,6 +39,7 @@ export class KnowledgeBase {
 
     this.db = new Database(resolvedPath);
     this.db.pragma("journal_mode = WAL");
+    this.db.pragma("foreign_keys = ON");
     this.init();
   }
 
@@ -57,6 +58,11 @@ export class KnowledgeBase {
         content,
         tags,
         content_rowid='rowid'
+      );
+
+      CREATE TABLE IF NOT EXISTS embeddings (
+        doc_id INTEGER PRIMARY KEY REFERENCES meta(id) ON DELETE CASCADE,
+        vector BLOB NOT NULL
       );
 
       CREATE TABLE IF NOT EXISTS oauth_codes (
@@ -237,6 +243,34 @@ export class KnowledgeBase {
     txn();
 
     return true;
+  }
+
+  // --- Embedding methods ---
+
+  saveEmbedding(docId: number, vector: Float32Array): void {
+    this.db
+      .prepare("INSERT OR REPLACE INTO embeddings (doc_id, vector) VALUES (?, ?)")
+      .run(docId, Buffer.from(vector.buffer));
+  }
+
+  getAllEmbeddings(): Array<{ doc_id: number; vector: Float32Array }> {
+    const rows = this.db
+      .prepare("SELECT doc_id, vector FROM embeddings")
+      .all() as Array<{ doc_id: number; vector: Buffer }>;
+
+    return rows.map((row) => ({
+      doc_id: row.doc_id,
+      vector: new Float32Array(row.vector.buffer, row.vector.byteOffset, row.vector.byteLength / 4),
+    }));
+  }
+
+  getDocIdsWithoutEmbeddings(): number[] {
+    const rows = this.db
+      .prepare(
+        "SELECT m.id FROM meta m LEFT JOIN embeddings e ON e.doc_id = m.id WHERE e.doc_id IS NULL"
+      )
+      .all() as Array<{ id: number }>;
+    return rows.map((r) => r.id);
   }
 
   // --- OAuth methods ---
