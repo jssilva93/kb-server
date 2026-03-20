@@ -61,6 +61,21 @@ export function startHttpTransport(
 
   // --- OAuth discovery ---
 
+  // RFC 9728 — OAuth Protected Resource Metadata
+  const protectedResourceHandler: express.RequestHandler = (_req, res) => {
+    if (!oauthEnabled) {
+      res.status(404).json({ error: "OAuth not configured" });
+      return;
+    }
+    const baseUrl = `${_req.protocol}://${_req.get("host")}`;
+    res.json({
+      resource: `${baseUrl}/mcp`,
+      authorization_servers: [baseUrl],
+    });
+  };
+  app.get("/.well-known/oauth-protected-resource", protectedResourceHandler);
+  app.get("/.well-known/oauth-protected-resource/mcp", protectedResourceHandler);
+
   app.get("/.well-known/oauth-authorization-server", (_req, res) => {
     if (!oauthEnabled) {
       res.status(404).json({ error: "OAuth not configured" });
