@@ -164,7 +164,7 @@ function createServer(): McpServer {
     "kb_read",
     "Lee el contenido completo de un documento por ID. Usa esto cuando kb_search devuelva un resultado relevante y necesites el contenido completo.",
     {
-      id: z.number().describe("Document ID"),
+      id: z.coerce.number().describe("Document ID"),
     },
     async ({ id }) => {
       console.log(`[kb_read] id=${id}`);
@@ -220,7 +220,7 @@ function createServer(): McpServer {
     "kb_delete",
     "Elimina un documento de la knowledge base por ID. Usa esto para borrar documentos obsoletos o incorrectos.",
     {
-      id: z.number().describe("Document ID to delete"),
+      id: z.coerce.number().describe("Document ID to delete"),
     },
     async ({ id }) => {
       console.log(`[kb_delete] id=${id}`);

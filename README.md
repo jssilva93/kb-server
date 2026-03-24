@@ -157,6 +157,162 @@ kb-server/
   tsconfig.json
 ```
 
+## System prompt for LLMs / Prompt de sistema para LLMs
+
+Instructions for any LLM client (Claude, etc.) to use the KB effectively. Add this to your system prompt or CLAUDE.md.
+
+Instrucciones para cualquier cliente LLM (Claude, etc.) para usar la KB efectivamente. Agregar al system prompt o CLAUDE.md.
+
+<details>
+<summary>English</summary>
+
+```markdown
+# Personal knowledge base (tools: kb_search, kb_ingest, kb_read, kb_list, kb_delete)
+
+## At the start of every conversation:
+
+- Call kb_search with "communication preferences personal context" to load the user's profile
+- Call kb_search with the main topics from the user's message
+- If a result seems relevant but incomplete, call kb_read with the corresponding ID to get the full document
+- Use the context found naturally, without mentioning that a search was performed
+
+## Save to the KB when:
+
+- A concrete solution was reached (bug resolved, decision made, implementation completed)
+- The user says "save this", "record this" or similar
+- A new project context was defined
+- A successful deploy of a significant change was made (new feature, production fix, infra change)
+- A production bug was discovered and resolved — save immediately with root cause and solution
+- A technical decision with evaluated trade-offs was made, even if it seems minor
+- Do not wait until the end of the conversation — save the moment something concrete is resolved
+- When in doubt, save. It's easier to delete an unhelpful document than to lose valuable context
+
+Before creating an evergreen document, call kb_list to check if one with that title already exists and update it instead of creating a duplicate.
+
+## Document formats by type:
+
+### Bugs and solutions → new document
+
+- title: "[project] short problem description"
+- tags: [project, technology, "bug", "resolved"]
+- content: ## Problem / ## Root cause / ## Solution / ## Relevant code
+
+### Architecture decisions → new document
+
+- title: "[project] Decision: what was decided"
+- tags: [project, "decision", "architecture"]
+- content: ## Context / ## Options evaluated / ## Decision / ## Reason
+
+### Project context → update existing evergreen document
+
+- title: "Project: [name]"
+- tags: [project, "context", "evergreen"]
+
+### Work preferences → update existing evergreen document
+
+- title: "Communication Preferences"
+- tags: ["personal", "preferences", "evergreen"]
+
+### Personal context → update existing evergreen document
+
+- title: "Personal Context — [Name]"
+- tags: ["personal", "context", "evergreen"]
+
+### Exploratory ideas → new document
+
+- title: "[area] Idea: description"
+- tags: [area, "idea"]
+
+## Delete from the KB when:
+
+- The user explicitly asks ("delete this", "remove that document")
+- A document is clearly obsolete or incorrect (confirm with the user before deleting)
+- Use kb_delete with the document ID
+
+## Do not save:
+
+- Conversations without a concrete conclusion
+- General questions without personal context
+- Content that already exists without new changes
+```
+
+</details>
+
+<details>
+<summary>Español</summary>
+
+```markdown
+# Base de conocimiento personal (tools: kb_search, kb_ingest, kb_read, kb_list, kb_delete)
+
+## Al inicio de cada conversación:
+
+- Llamar kb_search con "preferencias de comunicación contexto personal" para cargar el perfil del usuario
+- Llamar kb_search con los temas principales del mensaje del usuario
+- Si el resultado parece relevante pero incompleto, llamar kb_read con el ID correspondiente para obtener el documento completo
+- Usar el contexto encontrado de forma natural, sin mencionar que se buscó
+
+## Guardar en la KB cuando:
+
+- Se llegó a una solución concreta (bug resuelto, decisión tomada, implementación completada)
+- El usuario dice "guarda esto", "registra esto" o similar
+- Se definió el contexto de un proyecto nuevo
+- Se hizo deploy exitoso de un cambio significativo (nueva feature, fix de producción, cambio de infra)
+- Se descubrió y resolvió un bug en producción — guardar inmediatamente con causa raíz y solución
+- Se tomó una decisión técnica con trade-offs evaluados, aunque parezca menor
+- No esperar al cierre de la conversación — guardar en el momento en que se resuelve algo concreto
+- Ante la duda, guardar. Es más fácil borrar un documento que no sirve que perder contexto valioso
+
+Antes de crear un documento evergreen, llamar kb_list para verificar si ya existe uno con ese título y actualizarlo en lugar de crear un duplicado.
+
+## Formatos por tipo de documento:
+
+### Bugs y soluciones → documento nuevo
+
+- title: "[proyecto] descripción corta del problema"
+- tags: [proyecto, tecnología, "bug", "resuelto"]
+- contenido: ## Problema / ## Causa raíz / ## Solución / ## Código relevante
+
+### Decisiones de arquitectura → documento nuevo
+
+- title: "[proyecto] Decisión: qué se decidió"
+- tags: [proyecto, "decisión", "arquitectura"]
+- contenido: ## Contexto / ## Opciones evaluadas / ## Decisión / ## Razón
+
+### Contexto de proyecto → actualizar documento evergreen existente
+
+- title: "Proyecto: [nombre]"
+- tags: [proyecto, "contexto", "evergreen"]
+
+### Preferencias de trabajo → actualizar documento evergreen existente
+
+- title: "Preferencias de Comunicación"
+- tags: ["personal", "preferencias", "evergreen"]
+
+### Contexto personal → actualizar documento evergreen existente
+
+- title: "Contexto Personal — [Nombre]"
+- tags: ["personal", "contexto", "evergreen"]
+
+### Ideas exploratorias → documento nuevo
+
+- title: "[área] Idea: descripción"
+- tags: [área, "idea"]
+
+## Borrar de la KB cuando:
+
+- El usuario lo pide explícitamente ("borra esto", "elimina ese documento")
+- Un documento es claramente obsoleto o incorrecto (confirmar con el usuario antes de borrar)
+- Usar kb_delete con el ID del documento
+
+## No guardar:
+
+- Conversaciones sin conclusión concreta
+- Preguntas generales sin contexto personal
+- Contenido que ya existe sin cambios nuevos
+```
+
+</details>
+
 ## How hybrid search works
 
 1. **FTS5** finds keyword matches using BM25 ranking
