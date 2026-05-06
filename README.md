@@ -184,8 +184,20 @@ Instrucciones para cualquier cliente LLM (Claude, etc.) para usar la KB efectiva
 - A successful deploy of a significant change was made (new feature, production fix, infra change)
 - A production bug was discovered and resolved — save immediately with root cause and solution
 - A technical decision with evaluated trade-offs was made, even if it seems minor
+- New information was discovered about an existing project (stack change, new team member, deadline)
+- A conclusion was reached on how to do something (workflow, process, configuration)
 - Do not wait until the end of the conversation — save the moment something concrete is resolved
 - When in doubt, save. It's easier to delete an unhelpful document than to lose valuable context
+
+## Proactive check at the end of every response:
+
+Before finishing EACH response, ask yourself:
+1. Did I edit or create any file in this response? → save decision/context if non-trivial
+2. Was a decision made between multiple options? → save even if the user didn't ask
+3. Was something non-obvious about the project or code explained? → save as project context
+4. Did the user confirm something worked or that an approach was correct? → save
+
+If the answer to any of these is "yes", save before finishing — not at the end of the conversation.
 
 Before creating an evergreen document, call kb_list to check if one with that title already exists and update it instead of creating a duplicate.
 
@@ -259,8 +271,20 @@ Before creating an evergreen document, call kb_list to check if one with that ti
 - Se hizo deploy exitoso de un cambio significativo (nueva feature, fix de producción, cambio de infra)
 - Se descubrió y resolvió un bug en producción — guardar inmediatamente con causa raíz y solución
 - Se tomó una decisión técnica con trade-offs evaluados, aunque parezca menor
+- Se descubrió información nueva sobre un proyecto existente (cambio de stack, nuevo integrante, deadline)
+- Se llegó a una conclusión sobre cómo hacer algo (workflow, proceso, configuración)
 - No esperar al cierre de la conversación — guardar en el momento en que se resuelve algo concreto
 - Ante la duda, guardar. Es más fácil borrar un documento que no sirve que perder contexto valioso
+
+## Verificación proactiva al final de cada respuesta:
+
+Antes de terminar CADA respuesta, preguntarse:
+1. ¿Edité o creé algún archivo en esta respuesta? → guardar decisión/contexto si no es trivial
+2. ¿Se tomó alguna decisión entre varias opciones? → guardar aunque el usuario no lo pida
+3. ¿Se explicó algo no obvio sobre el proyecto o el código? → guardar como contexto del proyecto
+4. ¿El usuario confirmó que algo funcionó o que un enfoque fue el correcto? → guardar
+
+Si la respuesta a alguna es "sí", guardar antes de terminar — no al final de la conversación.
 
 Antes de crear un documento evergreen, llamar kb_list para verificar si ya existe uno con ese título y actualizarlo en lugar de crear un duplicado.
 
